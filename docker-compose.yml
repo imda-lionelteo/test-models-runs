@@ -58,11 +58,12 @@ services:
       - ./config/moonshot_config.yaml:/app/moonshot_config.yaml  # Mount your local moonshot config
       - ./config:/app/config  # Mount entire config directory for other files
       - ./src/litellm_adapter.py:/app/src/adapters/connector/litellm_adapter.py  # Mount litellm adapter
+      - ./src/moonshot_commands.sh:/app/moonshot_commands.sh  # Mount moonshot commands
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}  # Set via .env file or export
       - LITELLM_API_KEY=${LITELLM_API_KEY}  # Set via .env file or export
     # Default command - can be overridden
-    command: ["sh", "-c", "sleep 15 && wget -q --spider http://litellm:4000/health/liveliness || echo 'Health check failed, continuing anyway' && moonshot run my-run-1 sample_test my-gpt-4o"]
+    command: ["sh", "-c", "sleep 15 && wget -q --spider http://litellm:4000/health/liveliness || echo 'Health check failed, continuing anyway' && chmod +x ./moonshot_commands.sh && ./moonshot_commands.sh"]
     # Uncomment to keep container running for interactive use:
     # tty: true
     # stdin_open: true

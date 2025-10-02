@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # LiteLLM app
+  litellm:
+    container_name: litellm
+    image: ghcr.io/berriai/litellm:main-latest
+    ports:
+      - 4000:4000 # Map the container port to the host, change the host port if necessary
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml # Mount the local configuration file
+    # You can change the port or number of workers as per your requirements or pass any new supported CLI augument. Make sure the port passed here matches with the container port defined above in `ports` value
+    command: [ "--config", "/app/config.yaml", "--port", "4000", "--num_workers", "8" ]
+    environment:
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-1234}
+      - DATABASE_URL=postgresql://${LITELLM_POSTGRES_USER:-postgres}:${LITELLM_POSTGRES_PASSWORD:-postgres}@${LITELLM_POSTGRES_HOST:-litellm_db}:${LITELLM_POSTGRES_PORT:-5432}/${LITELLM_POSTGRES_DB:-postgres}
+      - STORE_MODEL_IN_DB=True # allows adding models to proxy via UI
+      - UI_USERNAME=${UI_USERNAME}
+      - UI_PASSWORD=${UI_PASSWORD}
+    env_file:
+      - .env
+    depends_on:
+      litellm_db:
+        condition: service_healthy
+    networks:
+      - internal
+  
+  # LiteLLM database
+  litellm_db:
+    image: postgres:17
+    container_name: litellm_db
+    restart: always
+    ports:
+      - "5433:${LITELLM_POSTGRES_PORT:-5432}"
+    environment:
+      - POSTGRES_USER=${LITELLM_POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${LITELLM_POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_PORT=${LITELLM_POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${LITELLM_POSTGRES_DB:-postgres}
+      - POSTGRES_HOST=${LITELLM_POSTGRES_HOST:-litellm_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LITELLM_POSTGRES_USER:-postgres} -d ${LITELLM_POSTGRES_DB:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+      
+  moonshot:
+    image: ghcr.io/aiverify-foundation/moonshot:latest
+    container_name: moonshot
+    working_dir: /app
+    volumes:
+      - ./results:/app/data/results  # Mount results directory to persist output
+      - ./config/moonshot_config.yaml:/app/moonshot_config.yaml  # Mount your local moonshot config
+      - ./config:/app/config  # Mount entire config directory for other files
+      - ./src/litellm_adapter.py:/app/src/adapters/connector/litellm_adapter.py  # Mount litellm adapter
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}  # Set via .env file or export
+      - LITELLM_API_KEY=${LITELLM_API_KEY}  # Set via .env file or export
+    # Default command - can be overridden
+    command: ["sh", "-c", "sleep 15 && wget -q --spider http://litellm:4000/health/liveliness || echo 'Health check failed, continuing anyway' && moonshot run my-run-1 sample_test my-gpt-4o"]
+    # Uncomment to keep container running for interactive use:
+    # tty: true
+    # stdin_open: true
+    depends_on:
+      litellm_db:
+        condition: service_healthy
+    networks:
+      - internal
+
+volumes:
+  postgres_data:
+
+networks:
+  internal:
+    driver: bridge

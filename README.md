@@ -46,9 +46,18 @@ yourClonedFolder/test-models-runs/results/my-run-1.json
 The log is at yourClonedFolder/test-models-run/ms.log
 
 # So where is the command that is run.
-It is in docker-compose.yml command: ["sh", "-c", "sleep 15 && wget -q --spider http://litellm:4000/health/liveliness || echo 'Health check failed, continuing anyway' && moonshot run my-run-1 sample_test my-gpt-4o"]
+It is in docker-compose.yml 
+command: ["sh", "-c", "sleep 15 && wget -q --spider http://litellm:4000/health/liveliness || echo 'Health check failed, continuing anyway' && chmod +x ./moonshot_commands.sh && ./moonshot_commands.sh"]
 
-Currently, it is only running 1 command, to move forward, we could run a script here instead of just a command.
+Refer to moonshot_commands.sh, it is currently running 
+RUN_IDS="my-run-1 my-run-2 my-run-3 my-run-4"
+TEST_NAMES="sample_test"
+MODELS="my-gpt-4o my-gpt-4o-mini my-gpt-o1 my-gpt-o1-mini"
+
+4 runs, my-gpt-4o on sample_test, my-gpt-4o-mini on sample_test, ...
+for my-run-1 and my-run-2 it runs on litellm_adapter.
+for my-run-3 and my-run-4 it runs on openai_adapter.
+This is defined in moonshot_config.yaml
 
 # What if i want to expand beside OPENAI_API_KEY in moonshot
 you can add more environment variables in docker-compose.yml

@@ -6,12 +6,14 @@ git clone https://github.com/imda-lionelteo/test-models-runs
 # Replace openai key so litellm can detect this key
 Go to .env, replace your OPENAI_API_KEY=MyKey1234
 
+nano test-models-runs/.env
+
 # Run the docker compose file - it will setup the litellm-db and litellm container, and will pull moonshot and run an example.
 cd test-models-runs
 
 docker compose up
 
-# Note that this run will fail, because it is trying to read the litellm-api-key which is not existent yet, it just setup.
+# Note that this run will fail for litellm-adapters, because it is trying to read the litellm-api-key which is not existent yet, it just setup.
 # Do not kill the container yet.
 Open your browser and go to http://localhost:4000/sso/key/generate, it will ask you for the login and pw, it is admin, admin123
 Click create a new key, place some key name, select all team models for models.
@@ -23,6 +25,9 @@ Press ctrl-c and wait for the containers to be shutdown.
 
 # in your terminal export the litellm-key
 export LITELLM_API_KEY=sk-UEjATkR-cLSxv5iRbhXrug
+
+# Remove the results folder if it exists.
+rm -r results
 
 # Run the docker compose file again
 docker compose up
